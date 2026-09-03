@@ -4,6 +4,8 @@ A personal coffee atelier built with React 19, TypeScript, Spring Boot 3.5 / Jav
 
 Read [ARCHITECTURE.md](ARCHITECTURE.md) for the architecture defined before implementation.
 
+For Vercel, see [DEPLOYMENT-VERCEL.md](DEPLOYMENT-VERCEL.md). The root `vercel.json` installs the frontend's build dependencies and publishes `frontend/dist`; the Spring Boot API needs a separately hosted backend.
+
 ## Run locally on Windows
 
 Prerequisites: Node.js 22+, Java 17+, Maven 3.9+. This workspace also contains a downloaded Maven distribution in ignored `.tools/`.
