@@ -1,0 +1,22 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/velora}
+    username: ${DATABASE_USER:velora}
+    password: ${DATABASE_PASSWORD:}
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+server:
+  error:
+    include-message: never
+  servlet:
+    session:
+      timeout: 12h
+      cookie:
+        http-only: true
+        same-site: lax
+        secure: ${COOKIE_SECURE:true}
+  forward-headers-strategy: framework
+velora:
+  admin-email: ${ADMIN_EMAIL:}
+  admin-password: ${ADMIN_PASSWORD:}
