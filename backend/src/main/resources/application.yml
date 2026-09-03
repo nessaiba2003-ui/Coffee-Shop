@@ -1,12 +1,13 @@
 spring:
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/velora}
+    url: ${DATABASE_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:velora}}
     username: ${DATABASE_USER:velora}
     password: ${DATABASE_PASSWORD:}
   jackson:
     serialization:
       write-dates-as-timestamps: false
 server:
+  port: ${PORT:8080}
   error:
     include-message: never
   servlet:

@@ -1,42 +1,38 @@
-# Déploiement du frontend sur Vercel
+# Déploiement complet : Vercel + Render + PostgreSQL
 
-## Correction de `tsc: command not found`
+Vercel sert l'application React. L'API Spring Boot et PostgreSQL sont créés par le Blueprint `render.yaml`. Cette séparation est nécessaire : une build Vercel ne peut pas exécuter durablement Spring Boot, PostgreSQL ou les sessions de l'application.
 
-Le dépôt possède deux `package.json`. Celui de la racine ne contient pas les dépendances du frontend : il délègue seulement ses commandes à `frontend`. Une installation npm à la racine n'installe donc ni TypeScript ni Vite dans le frontend.
+## 1. Créer l'API et la base de données sur Render
 
-Le fichier `vercel.json` à la racine corrige cette configuration :
+1. Sur [Render](https://dashboard.render.com/), choisir **New +** puis **Blueprint** et sélectionner le dépôt GitHub `Coffee-Shop`.
+2. Render détecte `render.yaml` et affiche `velora-api` ainsi que `velora-db`. Vérifier le prix affiché, puis appliquer le Blueprint.
+3. Pour `ADMIN_EMAIL`, saisir l'adresse qui doit recevoir le rôle administrateur. `ADMIN_PASSWORD` est généré par Render : le conserver dans le gestionnaire de secrets.
+4. Attendre que le service soit actif, puis ouvrir `https://VOTRE-SERVICE.onrender.com/api/health`. La réponse doit être `{"status":"ok"}`.
 
-| Réglage | Valeur |
+Le service utilise automatiquement le port attribué par Render, les identifiants PostgreSQL du Blueprint et des cookies sécurisés. Ne renseigner aucune valeur de base de données dans Vercel.
+
+## 2. Connecter Vercel à l'API
+
+Dans le projet Vercel, aller dans **Settings → Environment Variables**, créer la variable suivante pour **Production**, **Preview** et **Development** :
+
+| Nom | Valeur |
 | --- | --- |
-| Root Directory, dans les paramètres Vercel | Racine du dépôt (`./`), pas `frontend` |
-| Framework Preset | Other |
-| Install Command | `npm ci --prefix frontend --include=dev` |
-| Build Command | `npm run build` |
-| Output Directory | `frontend/dist` |
+| `BACKEND_URL` | l'origine HTTPS Render, par exemple `https://velora-api.onrender.com` |
 
-Les commandes et le dossier de sortie sont définis dans le fichier versionné. `--include=dev` installe les outils de compilation, même si l'environnement omet habituellement les dépendances de développement. Le fichier `frontend/package-lock.json` doit rester versionné.
+La valeur doit être uniquement l'origine HTTPS : sans `/api`, chemin, identifiants, paramètre ou `localhost`.
 
-Pousser `vercel.json` sur la branche utilisée par Vercel, puis relancer le déploiement. Pour le premier essai après correction, ne pas réutiliser le cache de build.
+Le fichier `vercel.mjs` refuse volontairement une build sans cette variable afin qu'un site public ne puisse plus afficher une interface fonctionnelle avec une API absente. Il installe TypeScript et Vite dans `frontend`, construit `frontend/dist`, route `/api/*` vers Render et conserve les routes React (`/lab`, `/passport`, `/staff`, etc.). Les réponses API ne sont pas mises en cache.
 
-Les réécritures permettent d'ouvrir directement les routes React, par exemple `/lab`, `/passport` ou `/craft/<id>`. Les requêtes `/api/*` ne sont volontairement pas réécrites vers le HTML.
+Lancer ensuite **Redeploy** dans Vercel en désactivant le cache une fois. Il n'est pas nécessaire de renseigner manuellement les commandes de build dans le tableau de bord : elles sont versionnées dans `vercel.mjs`.
 
-## Relier le backend Spring Boot
+## 3. Vérifier la mise en ligne
 
-Cette configuration déploie le frontend. Elle n'exécute pas le JAR Spring Boot, PostgreSQL, Docker Compose, ni le proxy de développement Vite.
+Ouvrir le domaine Vercel, puis vérifier :
 
-Déployer le backend sur un hébergement Java/Docker et configurer PostgreSQL, les identifiants administrateur, HTTPS et `COOKIE_SECURE=true`. Une fois son URL HTTPS réelle connue, ajouter **avant les autres réécritures** :
+1. La page Coffee Lab charge les ingrédients.
+2. La connexion administrateur fonctionne.
+3. Une création de boisson et le suivi de commande fonctionnent.
 
-```json
-{
-  "source": "/api/:path*",
-  "destination": "https://VOTRE-HOTE-BACKEND/api/:path*"
-}
-```
+Le navigateur reste toujours sur le domaine Vercel pour `/api`, ce qui conserve correctement les cookies de session, les jetons CSRF et les événements en temps réel. Si Render est indisponible, l'interface indique désormais clairement que le service API est indisponible ou non connecté.
 
-Remplacer l'hôte d'exemple par l'URL effective. Ne pas utiliser `localhost` ou `127.0.0.1`, qui ne désignent pas votre ordinateur depuis Vercel.
-
-Le frontend conserve ainsi ses URLs relatives `/api`, y compris pour les sessions, les jetons CSRF et les événements SSE. Le backend ne doit pas fixer un domaine de cookie différent du domaine public du frontend. Vérifier connexion, commandes et reconnexion SSE à travers le proxy avant mise en service. Ne pas mettre en cache les routes d'authentification ou les données client.
-
-Sans cette liaison, les pages publiques peuvent s'afficher mais les comptes, les ingrédients, les commandes et les tableaux de bord ne sont pas opérationnels.
-
-Références : [configuration Vercel](https://vercel.com/docs/project-configuration/vercel-json), [Vite sur Vercel](https://vercel.com/docs/frameworks/frontend/vite), [réécritures](https://vercel.com/docs/routing/rewrites).
+Références : [Blueprints Render](https://render.com/docs/blueprint-spec), [configuration Vercel](https://vercel.com/docs/project-configuration/vercel-json), [réécritures Vercel](https://vercel.com/docs/routing/rewrites).

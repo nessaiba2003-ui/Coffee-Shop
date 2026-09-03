@@ -1,11 +1,44 @@
-let csrf: { token: string; headerName: string } | null = null;
+type Csrf = { token: string; headerName: string };
+
+let csrf: Csrf | null = null;
+let csrfRequest: Promise<void> | null = null;
+
+const requestInit = { credentials: "include" as RequestCredentials, signal: AbortSignal.timeout(20_000) };
+
+function unavailableMessage(response?: Response) {
+  const contentType = response?.headers.get("content-type") ?? "";
+  if (response && contentType.includes("text/html")) {
+    return "The atelier service is not connected yet. Please ask the site owner to configure the production API.";
+  }
+  return "The atelier is temporarily unavailable. Please try again shortly.";
+}
+
+async function responseMessage(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    const data = await response.json().catch(() => null) as { message?: string } | null;
+    if (data?.message) return data.message;
+  }
+  return unavailableMessage(response);
+}
+
 export async function refreshCsrf() {
-  const response = await fetch("/api/auth/csrf", { credentials: "include" });
-  if (!response.ok)
-    throw new Error(
-      "The atelier is currently offline. Please try again shortly.",
-    );
-  csrf = await response.json();
+  if (csrfRequest) return csrfRequest;
+  csrfRequest = (async () => {
+    let response: Response;
+    try {
+      response = await fetch("/api/auth/csrf", requestInit);
+    } catch {
+      throw new Error(unavailableMessage());
+    }
+    if (!response.ok) throw new Error(await responseMessage(response));
+    csrf = await response.json() as Csrf;
+  })();
+  try {
+    await csrfRequest;
+  } finally {
+    csrfRequest = null;
+  }
 }
 export async function api<T = unknown>(
   path: string,
@@ -21,22 +54,14 @@ export async function api<T = unknown>(
     response = await fetch("/api" + path, {
       method,
       headers,
-      credentials: "include",
+      ...requestInit,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
-    throw new Error(
-      "The atelier is currently offline. Your creation is safe in this browser.",
-    );
+    throw new Error(unavailableMessage());
   }
   if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({
-        message:
-          "The atelier could not complete this request. Please try again.",
-      }));
-    throw new Error(error.message || "Something went wrong.");
+    throw new Error(await responseMessage(response));
   }
   if (response.status === 204 || response.headers.get("content-length") === "0")
     return undefined as T;
@@ -44,19 +69,25 @@ export async function api<T = unknown>(
   return text ? JSON.parse(text) : (undefined as T);
 }
 export async function login(email: string, password: string) {
+  csrf = null;
   await refreshCsrf();
-  const response = await fetch("/api/auth/login", {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      [csrf!.headerName]: csrf!.token,
-    },
-    body: new URLSearchParams({ email, password }),
-  });
-  if (!response.ok) {
-    const data = await response.json();
-    throw new Error(data.message);
+  let response: Response;
+  try {
+    response = await fetch("/api/auth/login", {
+      method: "POST",
+      ...requestInit,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        [csrf!.headerName]: csrf!.token,
+      },
+      body: new URLSearchParams({ email, password }),
+    });
+  } catch {
+    throw new Error(unavailableMessage());
   }
+  if (!response.ok) {
+    throw new Error(await responseMessage(response));
+  }
+  csrf = null;
   await refreshCsrf();
 }

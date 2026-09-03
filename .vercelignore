@@ -1,0 +1,11 @@
+.local
+.tools
+.npm-cache
+data
+.env
+.env.*
+backend
+frontend/node_modules
+frontend/dist
+.idea
+.git
