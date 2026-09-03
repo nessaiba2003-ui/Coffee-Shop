@@ -27,7 +27,15 @@ const memory = global.veloraMemory || (global.veloraMemory = { users: new Map(),
 const defaults = { base: "espresso", origin: "ethiopia", milk: "oat", syrup: "none", flavor: "none", topping: "none", size: "Regular", roast: "Medium", shots: 0, sweetness: 30, strength: 65, temperature: 65, ice: 0, creativity: 50, mood: "Creative" };
 
 function send(res, status, body) { res.status(status).json(body); }
-function pathOf(req) { const value = req.query.path || []; return Array.isArray(value) ? value.join("/") : value; }
+function pathOf(req) {
+  // Vercel normally exposes a catch-all parameter through req.query.path.
+  // Fall back to the URL because this value can be absent with a static build
+  // output configuration, which previously made every /api/* request return 404.
+  const value = req.query?.path;
+  if (value) return Array.isArray(value) ? value.join("/") : value;
+  const pathname = new URL(req.url || "/api", "http://localhost").pathname;
+  return pathname.replace(/^\/api\/?/, "");
+}
 function bodyOf(req) { return typeof req.body === "object" && req.body ? req.body : {}; }
 function sessionSecret() { return process.env.SESSION_SECRET || ""; }
 function sign(value) { return crypto.createHmac("sha256", sessionSecret()).update(value).digest("base64url"); }
