@@ -1,0 +1,24 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm ci --prefix frontend --include=dev",
+  "buildCommand": "npm run build",
+  "outputDirectory": "frontend/dist",
+  "rewrites": [
+    { "source": "/lab", "destination": "/index.html" },
+    { "source": "/passport", "destination": "/index.html" },
+    { "source": "/staff", "destination": "/index.html" },
+    { "source": "/admin", "destination": "/index.html" },
+    { "source": "/craft/:path*", "destination": "/index.html" },
+    { "source": "/card/:path*", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/api/:path*",
+      "headers": [{ "key": "Cache-Control", "value": "private, no-store" }]
+    }
+  ],
+  "functions": {
+    "api/[...path].js": { "maxDuration": 10 }
+  }
+}

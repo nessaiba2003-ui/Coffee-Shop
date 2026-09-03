@@ -8,7 +8,7 @@ const requestInit = { credentials: "include" as RequestCredentials, signal: Abor
 function unavailableMessage(response?: Response) {
   const contentType = response?.headers.get("content-type") ?? "";
   if (response && contentType.includes("text/html")) {
-    return "The atelier service is not connected yet. Please ask the site owner to configure the production API.";
+    return "The atelier API is temporarily unavailable. Please try again shortly.";
   }
   return "The atelier is temporarily unavailable. Please try again shortly.";
 }

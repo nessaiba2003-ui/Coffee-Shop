@@ -9,7 +9,7 @@ describe("API client", () => {
       headers: { "content-type": "text/html" },
     })));
     const { api } = await import("./api");
-    await expect(api("/catalog")).rejects.toThrow("service is not connected");
+    await expect(api("/catalog")).rejects.toThrow("API is temporarily unavailable");
   });
 
   it("uses the production API path for requests", async () => {

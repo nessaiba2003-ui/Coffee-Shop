@@ -4,7 +4,7 @@ A personal coffee atelier built with React 19, TypeScript, Spring Boot 3.5 / Jav
 
 Read [ARCHITECTURE.md](ARCHITECTURE.md) for the architecture defined before implementation.
 
-For Vercel, see [DEPLOYMENT-VERCEL.md](DEPLOYMENT-VERCEL.md). The root `vercel.json` installs the frontend's build dependencies and publishes `frontend/dist`; the Spring Boot API needs a separately hosted backend.
+For Vercel, see [DEPLOYMENT-VERCEL.md](DEPLOYMENT-VERCEL.md). The root `vercel.json` installs the frontend dependencies, publishes `frontend/dist`, and deploys the lightweight serverless API in `api/[...path].js` at `/api/*`. The full Spring Boot backend remains the local/Docker deployment option.
 
 ## Run locally on Windows
 

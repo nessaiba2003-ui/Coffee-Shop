@@ -1,38 +1,25 @@
-# Déploiement complet : Vercel + Render + PostgreSQL
+# Déploiement autonome sur Vercel
 
-Vercel sert l'application React. L'API Spring Boot et PostgreSQL sont créés par le Blueprint `render.yaml`. Cette séparation est nécessaire : une build Vercel ne peut pas exécuter durablement Spring Boot, PostgreSQL ou les sessions de l'application.
+Le frontend et l'API sont déployés dans le même projet Vercel. La fonction serverless [api/[...path].js](api/[...path].js) reçoit les requêtes `/api/*`; aucune variable `BACKEND_URL` et aucun service Render ne sont nécessaires.
 
-## 1. Créer l'API et la base de données sur Render
+## Réglages Vercel
 
-1. Sur [Render](https://dashboard.render.com/), choisir **New +** puis **Blueprint** et sélectionner le dépôt GitHub `Coffee-Shop`.
-2. Render détecte `render.yaml` et affiche `velora-api` ainsi que `velora-db`. Vérifier le prix affiché, puis appliquer le Blueprint.
-3. Pour `ADMIN_EMAIL`, saisir l'adresse qui doit recevoir le rôle administrateur. `ADMIN_PASSWORD` est généré par Render : le conserver dans le gestionnaire de secrets.
-4. Attendre que le service soit actif, puis ouvrir `https://VOTRE-SERVICE.onrender.com/api/health`. La réponse doit être `{"status":"ok"}`.
+Dans **Settings → General → Root Directory**, laisser la racine du dépôt (`.`) : ne pas choisir `frontend`. La fonction est dans `api/[...path].js` à la racine ; si `frontend` est défini comme répertoire racine, Vercel publie le site mais n'embarque pas l'API.
 
-Le service utilise automatiquement le port attribué par Render, les identifiants PostgreSQL du Blueprint et des cookies sécurisés. Ne renseigner aucune valeur de base de données dans Vercel.
+Dans **Settings → Environment Variables**, créer `SESSION_SECRET` pour **Production**, **Preview** et **Development**. Utiliser une valeur aléatoire longue, par exemple la sortie de `openssl rand -base64 32`. Ne jamais la placer dans Git.
 
-## 2. Connecter Vercel à l'API
+Le fichier `vercel.json` contient déjà les commandes de build correctes : il installe les dépendances du frontend, dont TypeScript, puis publie `frontend/dist`. Ne pas définir de commandes différentes dans le tableau de bord.
 
-Dans le projet Vercel, aller dans **Settings → Environment Variables**, créer la variable suivante pour **Production**, **Preview** et **Development** :
+Pousser les fichiers sur `main`, puis choisir **Redeploy**. L'URL suivante doit répondre après le déploiement :
 
-| Nom | Valeur |
-| --- | --- |
-| `BACKEND_URL` | l'origine HTTPS Render, par exemple `https://velora-api.onrender.com` |
+```
+https://VOTRE-PROJET.vercel.app/api/health
+```
 
-La valeur doit être uniquement l'origine HTTPS : sans `/api`, chemin, identifiants, paramètre ou `localhost`.
+Elle renvoie `{ "status": "up", "runtime": "vercel-serverless" }`. Les ingrédients, recommandations, création de compte, connexion et sauvegarde de recettes passent tous par cette API Vercel.
 
-Le fichier `vercel.mjs` refuse volontairement une build sans cette variable afin qu'un site public ne puisse plus afficher une interface fonctionnelle avec une API absente. Il installe TypeScript et Vite dans `frontend`, construit `frontend/dist`, route `/api/*` vers Render et conserve les routes React (`/lab`, `/passport`, `/staff`, etc.). Les réponses API ne sont pas mises en cache.
+## Persistance
 
-Lancer ensuite **Redeploy** dans Vercel en désactivant le cache une fois. Il n'est pas nécessaire de renseigner manuellement les commandes de build dans le tableau de bord : elles sont versionnées dans `vercel.mjs`.
+Les fonctions Vercel sont sans état entre les démarrages. Cette version conserve donc les comptes et recettes en mémoire pendant l'instance active, ce qui convient à une démonstration déployée. Les commandes, tableaux de bord et données administratives du serveur Spring Boot exigent une base durable ; ils ne peuvent pas être rendus fiables sur Vercel sans connecter un stockage persistant (par exemple Vercel Postgres ou un autre PostgreSQL).
 
-## 3. Vérifier la mise en ligne
-
-Ouvrir le domaine Vercel, puis vérifier :
-
-1. La page Coffee Lab charge les ingrédients.
-2. La connexion administrateur fonctionne.
-3. Une création de boisson et le suivi de commande fonctionnent.
-
-Le navigateur reste toujours sur le domaine Vercel pour `/api`, ce qui conserve correctement les cookies de session, les jetons CSRF et les événements en temps réel. Si Render est indisponible, l'interface indique désormais clairement que le service API est indisponible ou non connecté.
-
-Références : [Blueprints Render](https://render.com/docs/blueprint-spec), [configuration Vercel](https://vercel.com/docs/project-configuration/vercel-json), [réécritures Vercel](https://vercel.com/docs/routing/rewrites).
+Références : [fonctions Vercel](https://vercel.com/docs/functions), [configuration Vercel](https://vercel.com/docs/project-configuration/vercel-json).
