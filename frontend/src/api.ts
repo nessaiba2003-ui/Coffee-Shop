@@ -3,7 +3,12 @@ type Csrf = { token: string; headerName: string };
 let csrf: Csrf | null = null;
 let csrfRequest: Promise<void> | null = null;
 
-const requestInit = { credentials: "include" as RequestCredentials, signal: AbortSignal.timeout(20_000) };
+function requestInit() {
+  return {
+    credentials: "include" as RequestCredentials,
+    signal: AbortSignal.timeout(20_000),
+  };
+}
 
 function unavailableMessage(response?: Response) {
   const contentType = response?.headers.get("content-type") ?? "";
@@ -27,7 +32,7 @@ export async function refreshCsrf() {
   csrfRequest = (async () => {
     let response: Response;
     try {
-      response = await fetch("/api/auth/csrf", requestInit);
+      response = await fetch("/api/auth/csrf", requestInit());
     } catch {
       throw new Error(unavailableMessage());
     }
@@ -54,7 +59,7 @@ export async function api<T = unknown>(
     response = await fetch("/api" + path, {
       method,
       headers,
-      ...requestInit,
+      ...requestInit(),
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
@@ -75,7 +80,7 @@ export async function login(email: string, password: string) {
   try {
     response = await fetch("/api/auth/login", {
       method: "POST",
-      ...requestInit,
+      ...requestInit(),
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
         [csrf!.headerName]: csrf!.token,
