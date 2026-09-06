@@ -114,13 +114,6 @@ export function Home() {
               </div>
             </section>
           </div>
-          <div className="circle-stamp">
-            HUMAN CRAFT
-            <br />
-            <span>✳</span>
-            <br />
-            INFINITE POSSIBILITY
-          </div>
         </div>
         <div className="hero-bottom">
           <span>
