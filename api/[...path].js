@@ -38,11 +38,15 @@ function pathOf(req) {
 }
 function bodyOf(req) { return typeof req.body === "object" && req.body ? req.body : {}; }
 function ensureAdmins() {
-  for (const slot of ["1", "2"]) {
-    const email = process.env[`ADMIN_${slot}_EMAIL`]?.trim().toLowerCase();
-    const password = process.env[`ADMIN_${slot}_PASSWORD`];
+  const accounts = [
+    [process.env.ADMIN_1_EMAIL, process.env.ADMIN_1_PASSWORD, process.env.ADMIN_1_NAME, "1"],
+    [process.env.ADMIN_2_EMAIL, process.env.ADMIN_2_PASSWORD, process.env.ADMIN_2_NAME, "2"],
+    [process.env.ADMIN_EMAIL, process.env.ADMIN_PASSWORD, process.env.ADMIN_NAME, "1"],
+  ];
+  for (const [rawEmail, password, name, slot] of accounts) {
+    const email = rawEmail?.trim().toLowerCase();
     if (email && password && !memory.users.has(email)) {
-      memory.users.set(email, { id: crypto.randomUUID(), email, password, name: process.env[`ADMIN_${slot}_NAME`] || `Atelier admin ${slot}`, role: "ADMIN" });
+      memory.users.set(email, { id: crypto.randomUUID(), email, password, name: name || `Atelier admin ${slot}`, role: "ADMIN" });
     }
   }
 }

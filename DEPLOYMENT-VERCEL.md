@@ -23,6 +23,8 @@ Chaque administrateur dispose de son propre mot de passe. Dans les mêmes variab
 
 Après le redeploy, connectez-vous avec l’une de ces adresses dans **Sign in**. Les comptes recevront automatiquement le rôle **ADMIN** et ouvriront **Craft station** et **Studio**. Ne créez pas ces deux comptes avec le formulaire d’inscription : ils sont générés à partir des variables Vercel et leurs mots de passe ne sont jamais placés dans le dépôt.
 
+Les noms historiques `ADMIN_EMAIL`, `ADMIN_PASSWORD` et `ADMIN_NAME` sont aussi pris en charge pour le premier administrateur.
+
 Le fichier `vercel.json` contient déjà les commandes de build correctes : il installe les dépendances du frontend, dont TypeScript, puis publie `frontend/dist`. Ne pas définir de commandes différentes dans le tableau de bord.
 
 Pousser les fichiers sur `main`, puis choisir **Redeploy**. L'URL suivante doit répondre après le déploiement :
