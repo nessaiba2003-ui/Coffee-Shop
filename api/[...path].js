@@ -182,8 +182,44 @@ module.exports = async (req, res) => {
   }
   if (route === "admin/analytics" && req.method === "GET") {
     if (!requireAdmin(current, res)) return;
-    const recipes = [...memory.recipes.values()], orders = [...memory.orders.values()];
-    return send(res, 200, { totalOrders: orders.length, totalRecipes: recipes.length, totalCustomers: [...memory.users.values()].filter((item) => item.role === "CUSTOMER").length, revenue: orders.reduce((sum, order) => sum + order.price, 0), activeOrders: orders.filter((order) => !["Completed", "Cancelled"].includes(order.status)).length });
+    const recipes = [...memory.recipes.values()];
+    const orders = [...memory.orders.values()];
+    const completedOrders = orders.filter((order) => order.status === "Completed");
+    const countBy = (items, label) => items.reduce((result, item) => {
+      const key = label(item);
+      if (key) result[key] = (result[key] || 0) + 1;
+      return result;
+    }, {});
+    const totalRevenue = completedOrders.reduce((sum, order) => sum + (Number(order.price) || 0), 0);
+    const orderCountByCustomer = countBy(orders, (order) => order.owner_id);
+    const daily = Object.entries(orders.reduce((result, order) => {
+      const day = String(order.created_at || new Date().toISOString()).slice(0, 10);
+      const row = result[day] || { report_day: day, orders: 0, revenue: 0 };
+      row.orders += 1;
+      if (order.status === "Completed") row.revenue += Number(order.price) || 0;
+      result[day] = row;
+      return result;
+    }, {})).map(([, row]) => row).sort((a, b) => b.report_day.localeCompare(a.report_day));
+    const ingredientUses = {};
+    recipes.forEach((recipe) => (recipe.ingredients || []).forEach((item) => {
+      ingredientUses[item.name] = (ingredientUses[item.name] || 0) + (Number(item.quantity) || 1);
+    }));
+    return send(res, 200, {
+      orders: orders.length,
+      revenue: totalRevenue,
+      average: completedOrders.length ? Math.round(totalRevenue / completedOrders.length) : 0,
+      retention: orders.length ? Math.round((Object.values(orderCountByCustomer).filter((count) => count > 1).length / Math.max(1, Object.keys(orderCountByCustomer).length)) * 100) : 0,
+      moods: countBy(recipes, (recipe) => recipe.config?.mood),
+      coffees: countBy(orders, (order) => order.snapshot?.name),
+      hours: countBy(orders, (order) => new Date(order.created_at || Date.now()).getHours() + ":00"),
+      customizations: countBy(recipes, (recipe) => recipe.config?.milk),
+      ingredients: Object.entries(ingredientUses).map(([name, portions]) => ({ name, portions })),
+      creative: recipes.map((recipe) => ({ name: recipe.name, score: Number(recipe.config?.creativity) || 0 })),
+      lowStock: ingredients.filter((item) => item.stock - item.reserved <= item.threshold),
+      daily,
+      repeatOrders: Object.values(orderCountByCustomer).filter((count) => count > 1).reduce((sum, count) => sum + count, 0),
+      completed: completedOrders.length,
+    });
   }
   const adminMatch = route.match(/^admin\/(ingredients|users|recipes|orders|tables|records\/[^/]+)$/);
   if (adminMatch && req.method === "GET") {

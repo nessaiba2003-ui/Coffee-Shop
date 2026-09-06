@@ -788,6 +788,12 @@ function EditModal({
   );
 }
 function Analytics({ data }: { data: Row }) {
+  const list = (value: unknown) => Array.isArray(value) ? value as Row[] : [];
+  const chart = (value: unknown) => value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, number> : {};
+  const ingredients = list(data.ingredients);
+  const creative = list(data.creative);
+  const lowStock = list(data.lowStock);
+  const daily = list(data.daily);
   return (
     <>
       <div className="stats-grid admin-stats">
@@ -809,27 +815,27 @@ function Analytics({ data }: { data: Row }) {
         completed order.
       </p>
       <div className="analytics-grid">
-        <Chart title="Coffee, by feeling" values={data.moods} />
-        <Chart title="The favorite creations" values={data.coffees} />
-        <Chart title="Rituals through the day (atelier time)" values={data.hours} />
-        <Chart title="Popular customizations" values={data.customizations} />
+        <Chart title="Coffee, by feeling" values={chart(data.moods)} />
+        <Chart title="The favorite creations" values={chart(data.coffees)} />
+        <Chart title="Rituals through the day (atelier time)" values={chart(data.hours)} />
+        <Chart title="Popular customizations" values={chart(data.customizations)} />
         <Chart
           title="Ingredients used"
           values={Object.fromEntries(
-            data.ingredients.map((r: Row) => [r.name, r.portions]),
+            ingredients.map((r) => [r.name, r.portions]),
           )}
         />
         <Chart
           title="Creative signatures"
           values={Object.fromEntries(
-            data.creative.map((r: Row) => [r.name, r.score]),
+            creative.map((r) => [r.name, r.score]),
           )}
         />
       </div>
       <div className="analytics-panel">
         <h3>Stock that needs a little attention</h3>
-        {data.lowStock.length ? (
-          data.lowStock.map((i: Row) => (
+        {lowStock.length ? (
+          lowStock.map((i) => (
             <p key={i.name} className="stock-low">
               {i.name} · {i.stock - i.reserved} portions available
             </p>
@@ -842,7 +848,7 @@ function Analytics({ data }: { data: Row }) {
       </div>
       <div className="analytics-panel">
         <h3>Daily atelier journal</h3>
-        {data.daily.length ? (
+        {daily.length ? (
           <div className="data-table-wrap">
             <table className="data-table">
               <thead>
@@ -853,7 +859,7 @@ function Analytics({ data }: { data: Row }) {
                 </tr>
               </thead>
               <tbody>
-                {data.daily.map((d: Row) => (
+                {daily.map((d) => (
                   <tr key={d.report_day}>
                     <td>{d.report_day}</td>
                     <td>{d.orders}</td>
