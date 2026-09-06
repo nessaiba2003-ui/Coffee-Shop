@@ -8,6 +8,21 @@ Dans **Settings → General → Root Directory**, laisser la racine du dépôt (
 
 Dans **Settings → Environment Variables**, créer `SESSION_SECRET` pour **Production**, **Preview** et **Development**. Utiliser une valeur aléatoire longue, par exemple la sortie de `openssl rand -base64 32`. Ne jamais la placer dans Git.
 
+## Les deux administrateurs
+
+Chaque administrateur dispose de son propre mot de passe. Dans les mêmes variables Vercel, ajouter les six valeurs suivantes :
+
+| Variable | Valeur |
+| --- | --- |
+| `ADMIN_1_EMAIL` | votre première adresse administrateur |
+| `ADMIN_1_PASSWORD` | son mot de passe personnel, 12 caractères minimum |
+| `ADMIN_1_NAME` | son nom affiché |
+| `ADMIN_2_EMAIL` | la deuxième adresse administrateur |
+| `ADMIN_2_PASSWORD` | son mot de passe personnel, 12 caractères minimum |
+| `ADMIN_2_NAME` | son nom affiché |
+
+Après le redeploy, connectez-vous avec l’une de ces adresses dans **Sign in**. Les comptes recevront automatiquement le rôle **ADMIN** et ouvriront **Craft station** et **Studio**. Ne créez pas ces deux comptes avec le formulaire d’inscription : ils sont générés à partir des variables Vercel et leurs mots de passe ne sont jamais placés dans le dépôt.
+
 Le fichier `vercel.json` contient déjà les commandes de build correctes : il installe les dépendances du frontend, dont TypeScript, puis publie `frontend/dist`. Ne pas définir de commandes différentes dans le tableau de bord.
 
 Pousser les fichiers sur `main`, puis choisir **Redeploy**. L'URL suivante doit répondre après le déploiement :

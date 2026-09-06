@@ -23,7 +23,7 @@ const ingredients = [
   ["foam", "topping", "Cloud foam", 60, 40, "An airy, velvety finish"],
 ].map(([id, category, name, price, calories, notes]) => ({ id, category, name, price, calories, notes, stock: 200, reserved: 0, threshold: 10, available: true }));
 
-const memory = global.veloraMemory || (global.veloraMemory = { users: new Map(), recipes: new Map() });
+const memory = global.veloraMemory || (global.veloraMemory = { users: new Map(), recipes: new Map(), orders: new Map(), feedback: [] });
 const defaults = { base: "espresso", origin: "ethiopia", milk: "oat", syrup: "none", flavor: "none", topping: "none", size: "Regular", roast: "Medium", shots: 0, sweetness: 30, strength: 65, temperature: 65, ice: 0, creativity: 50, mood: "Creative" };
 
 function send(res, status, body) { res.status(status).json(body); }
@@ -37,6 +37,20 @@ function pathOf(req) {
   return pathname.replace(/^\/api\/?/, "");
 }
 function bodyOf(req) { return typeof req.body === "object" && req.body ? req.body : {}; }
+function ensureAdmins() {
+  for (const slot of ["1", "2"]) {
+    const email = process.env[`ADMIN_${slot}_EMAIL`]?.trim().toLowerCase();
+    const password = process.env[`ADMIN_${slot}_PASSWORD`];
+    if (email && password && !memory.users.has(email)) {
+      memory.users.set(email, { id: crypto.randomUUID(), email, password, name: process.env[`ADMIN_${slot}_NAME`] || `Atelier admin ${slot}`, role: "ADMIN" });
+    }
+  }
+}
+function requireAdmin(current, res) {
+  if (current?.role === "ADMIN") return true;
+  send(res, 403, { message: "This area is reserved for Atelier administrators." });
+  return false;
+}
 function sessionSecret() { return process.env.SESSION_SECRET || ""; }
 function sign(value) { return crypto.createHmac("sha256", sessionSecret()).update(value).digest("base64url"); }
 function user(req) {
@@ -63,6 +77,7 @@ function quote(input) {
 }
 
 module.exports = async (req, res) => {
+  ensureAdmins();
   const route = pathOf(req); const current = user(req);
   if (req.method === "GET" && route === "health") return send(res, 200, { status: "up", runtime: "vercel-serverless" });
   if (req.method === "GET" && route === "catalog") return send(res, 200, { ingredients, currency: "EUR" });
@@ -71,7 +86,7 @@ module.exports = async (req, res) => {
   if (req.method === "POST" && route === "auth/register") {
     const { email, name, password } = bodyOf(req);
     if (!email || !name || !password || String(password).length < 12) return send(res, 400, { message: "Use a name, an email and a password of at least 12 characters." });
-    if (memory.users.has(String(email).toLowerCase())) return send(res, 409, { message: "An account with this email already exists." });
+    if (memory.users.has(String(email).toLowerCase())) return send(res, 409, { message: "An account with this email already exists. Admin accounts use the password configured for them in Vercel." });
     memory.users.set(String(email).toLowerCase(), { id: crypto.randomUUID(), email: String(email).toLowerCase(), name: String(name), password: String(password), role: "CUSTOMER" });
     return send(res, 201, { id: memory.users.get(String(email).toLowerCase()).id });
   }
@@ -92,9 +107,101 @@ module.exports = async (req, res) => {
   if (req.method === "POST" && route === "recipes/quote") return send(res, 200, quote(bodyOf(req)));
   if (req.method === "POST" && route === "recipes") {
     if (!current) return send(res, 401, { message: "Please sign in to save a creation." });
-    const request = bodyOf(req); const q = quote(request.config || {}); const recipe = { id: crypto.randomUUID(), name: String(request.name || "Untitled coffee"), ...q, created_at: new Date().toISOString(), times_ordered: 0 };
+    const request = bodyOf(req); const q = quote(request.config || {});
+    const parent = request.parentId && memory.recipes.get(request.parentId);
+    if (parent && parent.owner !== current.id) return send(res, 404, { message: "This original coffee could not be found." });
+    const recipe = { id: crypto.randomUUID(), name: String(request.name || "Untitled coffee"), ...q, created_at: new Date().toISOString(), times_ordered: 0, parent_id: parent ? (parent.parent_id || parent.id) : undefined, version: parent ? (parent.version || 1) + 1 : 1, reactions: [] };
     memory.recipes.set(recipe.id, { ...recipe, owner: current.id }); return send(res, 201, recipe);
   }
   if (req.method === "GET" && route === "recipes") return current ? send(res, 200, [...memory.recipes.values()].filter((recipe) => recipe.owner === current.id)) : send(res, 401, { message: "Please sign in to continue." });
+  if (req.method === "GET" && route === "passport") {
+    if (!current) return send(res, 401, { message: "Please sign in to continue." });
+    const recipes = [...memory.recipes.values()].filter((recipe) => recipe.owner === current.id);
+    const orders = [...memory.orders.values()].filter((order) => order.owner_id === current.id);
+    const counts = new Map();
+    recipes.forEach((recipe) => recipe.ingredients.forEach((item) => counts.set(item.name, (counts.get(item.name) || 0) + item.quantity)));
+    const favoriteIngredients = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4).map(([name, portions]) => ({ name, portions }));
+    return send(res, 200, { recipes, orders, favoriteIngredients, completed: orders.filter((order) => order.status === "Completed").length, points: recipes.length * 10, streak: recipes.length ? 1 : 0, badges: recipes.length ? ["Espresso Explorer"] : [], favorite: recipes.slice().sort((a, b) => b.times_ordered - a.times_ordered)[0] });
+  }
+  const shareMatch = route.match(/^recipes\/([^/]+)\/share$/);
+  if (shareMatch && req.method === "POST") {
+    if (!current) return send(res, 401, { message: "Please sign in to share a coffee." });
+    const recipe = memory.recipes.get(shareMatch[1]);
+    if (!recipe || recipe.owner !== current.id) return send(res, 404, { message: "This coffee could not be found." });
+    recipe.share_token ||= crypto.randomUUID().replaceAll("-", ""); return send(res, 200, { token: recipe.share_token });
+  }
+  if (shareMatch && req.method === "DELETE") {
+    if (!current) return send(res, 401, { message: "Please sign in to continue." });
+    const recipe = memory.recipes.get(shareMatch[1]);
+    if (!recipe || recipe.owner !== current.id) return send(res, 404, { message: "This coffee could not be found." });
+    delete recipe.share_token; return res.status(204).end();
+  }
+  const cardMatch = route.match(/^cards\/([^/]+)$/);
+  if (cardMatch && req.method === "GET") {
+    const recipe = [...memory.recipes.values()].find((item) => item.share_token === cardMatch[1]);
+    return recipe ? send(res, 200, recipe) : send(res, 404, { message: "This coffee card could not be found." });
+  }
+  if (req.method === "POST" && route === "orders") {
+    if (!current) return send(res, 401, { message: "Please sign in to create an order." });
+    const recipe = memory.recipes.get(bodyOf(req).recipeId);
+    if (!recipe || recipe.owner !== current.id) return send(res, 404, { message: "Save this coffee before crafting it." });
+    const order = { id: crypto.randomUUID(), owner_id: current.id, recipe_id: recipe.id, status: "Created", stage: -1, price: recipe.price, customer: current.name, created_at: new Date().toISOString(), priority: 0, snapshot: { name: recipe.name, config: recipe.config, dna: recipe.dna, ingredients: recipe.ingredients, calories: recipe.calories, minutes: recipe.minutes } };
+    recipe.times_ordered += 1; memory.orders.set(order.id, order); return send(res, 201, order);
+  }
+  const orderMatch = route.match(/^orders\/([^/]+)$/);
+  if (orderMatch && req.method === "GET") {
+    const order = memory.orders.get(orderMatch[1]);
+    return order && current?.id === order.owner_id ? send(res, 200, order) : send(res, 404, { message: "This coffee journey could not be found." });
+  }
+  if (req.method === "GET" && route === "staff/orders") {
+    if (!requireAdmin(current, res)) return;
+    return send(res, 200, [...memory.orders.values()].filter((order) => !["Completed", "Cancelled"].includes(order.status)));
+  }
+  const staffMatch = route.match(/^staff\/orders\/([^/]+)\/(advance|cancel|priority)$/);
+  if (staffMatch && ["POST", "PATCH"].includes(req.method)) {
+    if (!requireAdmin(current, res)) return;
+    const order = memory.orders.get(staffMatch[1]);
+    if (!order) return send(res, 404, { message: "This order could not be found." });
+    if (staffMatch[2] === "priority") order.priority = Math.max(0, Math.min(2, Number(bodyOf(req).priority) || 0));
+    else if (staffMatch[2] === "cancel") { order.status = "Cancelled"; order.stage = -1; }
+    else { const stages = ["Confirmed", "Queued", "Preparing", "Crafting", "Ready", "Delivered", "Completed"]; order.stage = Math.min(order.stage + 1, stages.length - 1); order.status = stages[order.stage]; }
+    return send(res, 200, order);
+  }
+  if (route === "admin/analytics" && req.method === "GET") {
+    if (!requireAdmin(current, res)) return;
+    const recipes = [...memory.recipes.values()], orders = [...memory.orders.values()];
+    return send(res, 200, { totalOrders: orders.length, totalRecipes: recipes.length, totalCustomers: [...memory.users.values()].filter((item) => item.role === "CUSTOMER").length, revenue: orders.reduce((sum, order) => sum + order.price, 0), activeOrders: orders.filter((order) => !["Completed", "Cancelled"].includes(order.status)).length });
+  }
+  const adminMatch = route.match(/^admin\/(ingredients|users|recipes|orders|tables|records\/[^/]+)$/);
+  if (adminMatch && req.method === "GET") {
+    if (!requireAdmin(current, res)) return;
+    const resource = adminMatch[1];
+    if (resource === "ingredients") return send(res, 200, ingredients);
+    if (resource === "users") return send(res, 200, [...memory.users.values()].map(({ password, ...account }) => account));
+    if (resource === "recipes") return send(res, 200, [...memory.recipes.values()]);
+    if (resource === "orders") return send(res, 200, [...memory.orders.values()]);
+    return send(res, 200, []);
+  }
+  if (req.method === "POST" && route === "feedback") {
+    if (!current) return send(res, 401, { message: "Please sign in to share feedback." });
+    const { reaction, message, recipeId } = bodyOf(req);
+    const note = String(message || "").trim();
+    const allowed = ["Loved it", "Made my morning", "Gave me energy", "Helped me focus", "Perfect night coffee"];
+    if (!allowed.includes(reaction)) return send(res, 400, { message: "Choose one of the coffee memories." });
+    if (note.length > 1000)
+      return send(res, 400, { message: "Your feedback must be 1,000 characters or fewer." });
+    const feedback = {
+      id: crypto.randomUUID(),
+      customerId: current.id,
+      reaction,
+      recipeId,
+      message: note,
+      createdAt: new Date().toISOString(),
+    };
+    const recipe = recipeId && memory.recipes.get(recipeId);
+    if (recipe && recipe.owner === current.id) recipe.reactions = [...(recipe.reactions || []), reaction];
+    memory.feedback.push(feedback);
+    return send(res, 201, { id: feedback.id });
+  }
   return send(res, 404, { message: "This Vercel API route is not available yet." });
 };

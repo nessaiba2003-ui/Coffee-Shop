@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { Eyebrow, DnaRadar, CoffeeVisual } from "../ui";
 import { defaultConfig } from "../types";
+import { discoveries, timeMoment } from "../experience";
 export const moods = [
   { name: "Need Energy", icon: Sun, desc: "A little extra spark." },
   { name: "Calm", icon: Wind, desc: "Slow down. Sip softly." },
@@ -30,6 +31,7 @@ export const moods = [
 export function Home() {
   const navigate = useNavigate();
   const [allMoods, setAllMoods] = useState(false);
+  const moment = timeMoment();
   return (
     <>
       <section className="hero">
@@ -48,6 +50,9 @@ export function Home() {
             <br className="desktop-break" /> around your taste, your mood, your
             moment.
           </p>
+          <button className="moment-prompt" onClick={() => navigate("/lab?mood=" + encodeURIComponent(moment.mood))}>
+            <span className="live-dot" /> <strong>{moment.title}</strong> {moment.prompt} <ArrowUpRight size={14} />
+          </button>
           <div className="hero-buttons">
             <Link to="/lab" className="button">
               Create my coffee <ArrowUpRight size={19} />
@@ -177,6 +182,27 @@ export function Home() {
             style={allMoods ? { transform: "rotate(45deg)" } : undefined}
           />
         </button>
+      </section>
+      <section className="discover-section section" aria-labelledby="discover-title">
+        <div className="section-heading">
+          <div>
+            <Eyebrow>DISCOVER / STORIES TO BEGIN WITH</Eyebrow>
+            <h2 id="discover-title">Not a menu. A <em>way in.</em></h2>
+          </div>
+          <p>Start from a story, then make it entirely your own.</p>
+        </div>
+        <div className="discover-grid">
+          {discoveries.map((discovery, index) => (
+            <article className="discover-card" key={discovery.title}>
+              <span>0{index + 1} / DISCOVERY</span>
+              <h3>{discovery.title}</h3>
+              <p>{discovery.note}</p>
+              <button onClick={() => navigate("/lab?mood=" + encodeURIComponent(discovery.config.mood || "Creative"))} className="text-link">
+                Start here <ArrowUpRight size={16} />
+              </button>
+            </article>
+          ))}
+        </div>
       </section>
       <section className="experience-section section" id="experience">
         <div className="experience-visual">

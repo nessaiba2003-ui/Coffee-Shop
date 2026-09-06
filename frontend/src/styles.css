@@ -1531,6 +1531,81 @@ input[type="range"]::-moz-range-thumb {
   color: var(--muted);
   margin-top: 8px;
 }
+.feedback-card {
+  margin-top: 64px;
+  padding: 38px;
+  border: 1px solid #d7d9ca;
+  background: #e9edda;
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(300px, 1fr);
+  gap: 48px;
+  align-items: start;
+}
+.feedback-card h2 {
+  font-size: 42px;
+  margin: 13px 0 12px;
+}
+.feedback-card p {
+  max-width: 320px;
+  margin: 0;
+  font-size: 12px;
+  color: #68705a;
+}
+.feedback-form {
+  display: flex;
+  flex-direction: column;
+  gap: 17px;
+}
+.feedback-form fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.feedback-form legend,
+.feedback-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 12px;
+}
+.feedback-form label span {
+  color: var(--muted);
+}
+.feedback-form textarea {
+  min-height: 96px;
+  margin: 0;
+}
+.feedback-form .button {
+  align-self: flex-start;
+}
+.rating-stars {
+  display: flex;
+  gap: 5px;
+  margin-top: 9px;
+}
+.rating-stars button {
+  padding: 2px;
+  border: 0;
+  background: transparent;
+  color: #b1b7a1;
+}
+.rating-stars button.selected {
+  color: var(--wine);
+}
+.rating-stars button:focus-visible {
+  outline: 2px solid var(--wine);
+  outline-offset: 3px;
+}
+.feedback-thanks {
+  padding: 18px;
+  color: var(--wine);
+  border: 1px solid #c8d0b1;
+  background: #f7f7ed;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
 .status-pill {
   display: inline-block;
   background: #e3e8d4;
@@ -3363,7 +3438,48 @@ input[type="range"]::-moz-range-thumb {
   .photo-title {
     bottom: 145px;
   }
+  .feedback-card {
+    grid-template-columns: 1fr;
+    gap: 27px;
+    padding: 26px 22px;
+    margin-top: 45px;
+  }
+  .feedback-card h2 {
+    font-size: 36px;
+  }
 }
 
 /* Comfortable touch targets while keeping the fine track. */
+.moment-prompt { display: inline-flex; align-items: center; gap: 8px; margin: -4px 0 25px; padding: 10px 12px; border: 1px solid #d9dccb; background: #faf8ef; color: #596047; font-size: 11px; }
+.moment-prompt strong { color: var(--wine); }
+.discover-section { border-top: 1px solid var(--line); }
+.discover-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.discover-card { min-height: 245px; padding: 28px; display: flex; flex-direction: column; align-items: flex-start; border: 1px solid #d9d8ce; background: linear-gradient(145deg, #ecebdc, #dce4c2); }
+.discover-card:nth-child(2) { background: linear-gradient(145deg, #601f31, #873c4c); color: #f8f5e9; }
+.discover-card:nth-child(3) { background: linear-gradient(145deg, #d4e58f, #eef0d8); }
+.discover-card > span { font: 9px "DM Mono", monospace; letter-spacing: 1.2px; }
+.discover-card h3 { margin: auto 0 8px; max-width: 220px; font: 32px/1.03 "Instrument Serif", Georgia, serif; }
+.discover-card p { margin: 0 0 22px; font-size: 12px; line-height: 1.5; }
+.discover-card .text-link { margin-top: auto; }
+.coffee-identity { margin: 20px 0; padding: 17px; border-left: 2px solid var(--wine); background: #eeede1; }
+.coffee-identity h3 { margin: 7px 0 2px; font: 28px "Instrument Serif", Georgia, serif; color: var(--wine); }
+.coffee-identity > span { font: 10px "DM Mono", monospace; letter-spacing: 1.2px; }
+.coffee-identity p { margin: 9px 0 0; font-size: 12px; line-height: 1.55; color: var(--muted); }
+.reaction-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+.reaction-row button { display: inline-flex; align-items: center; gap: 6px; padding: 8px 10px; border: 1px solid #cfd4bf; background: #f7f7ed; color: #596047; font-size: 11px; }
+.reaction-row button.selected { border-color: var(--wine); color: var(--wine); background: #f2e5e7; }
+.recipe-story { margin: 10px 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+.recipe-personality { display: inline-block; margin-bottom: 14px; color: var(--wine); font: 9px "DM Mono", monospace; letter-spacing: 1px; text-transform: uppercase; }
+.coffee-universe { display: grid; grid-template-columns: .8fr 1.2fr; gap: 38px; margin: 70px 0; padding: 38px; background: #242d25; color: #f4f1e5; overflow: hidden; }
+.coffee-universe h2 { margin: 12px 0; }
+.coffee-universe h2 em { color: var(--lime); }
+.coffee-universe p { max-width: 360px; color: #c5c9b5; font-size: 12px; }
+.coffee-universe strong, .coffee-universe > div > span { display: block; margin-top: 14px; }
+.coffee-universe > div > span { color: #b6bd9d; font-size: 11px; }
+.coffee-universe .text-link { margin-top: 22px; color: var(--lime); }
+.constellation-map { position: relative; min-height: 310px; border: 1px solid #5c6659; background: radial-gradient(circle at center, #4c5942 0, transparent 3px), radial-gradient(circle at 20% 20%, #d5e88b 0, transparent 1px), #1d251e; background-size: 43px 43px, 23px 23px, auto; }
+.constellation-map::before { content: "YOUR TASTE, IN ORBIT"; position: absolute; top: 15px; left: 17px; color: #aab39a; font: 9px "DM Mono", monospace; letter-spacing: 1.4px; }
+.constellation-map button { position: absolute; transform: translate(-50%, -50%); border: 1px solid #d5e88b; border-radius: 50%; padding: 0; background: #d5e88b; box-shadow: 0 0 0 5px #d5e88b11, 0 0 23px #d5e88b66; transition: transform .2s, background .2s; }
+.constellation-map button:hover, .constellation-map button.active { background: #fff7db; transform: translate(-50%, -50%) scale(1.45); }
+@media (max-width: 760px) { .discover-grid, .coffee-universe { grid-template-columns: 1fr; } .discover-card { min-height: 190px; } .coffee-universe { padding: 25px 20px; margin: 48px 0; gap: 25px; } .constellation-map { min-height: 250px; } }
 input[type=range]{height:24px;background:none;margin:12px 0 7px}input[type=range]::-webkit-slider-runnable-track{height:3px;background:linear-gradient(to right,var(--wine) var(--range),#dddccf var(--range))}input[type=range]::-webkit-slider-thumb{margin-top:-5px}input[type=range]::-moz-range-track{height:3px;background:linear-gradient(to right,var(--wine) var(--range),#dddccf var(--range))}.favorite-notes{margin:0 0 25px}@media(max-width:600px){.icon-button{min-width:40px;min-height:40px}}

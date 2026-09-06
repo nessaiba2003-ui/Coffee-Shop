@@ -10,10 +10,16 @@ import {
   Bookmark,
   MapPin,
   UserRound,
+  Heart,
+  Zap,
+  Brain,
+  Moon,
+  Sparkles,
 } from "lucide-react";
 import { useApp } from "../context";
 import { api } from "../api";
 import { type Recipe, type Order, type Passport, money } from "../types";
+import { coffeePersonality, coffeeStory, recipeDistance } from "../experience";
 import {
   CoffeeVisual,
   Dna,
@@ -65,7 +71,10 @@ export function PassportPage() {
   const [data, setData] = useState<Passport | null>(null),
     [error, setError] = useState(""),
     [share, setShare] = useState<{ recipe: Recipe; url: string } | null>(null),
-    [busy, setBusy] = useState("");
+    [busy, setBusy] = useState(""),
+    [reaction, setReaction] = useState(""),
+    [feedback, setFeedback] = useState(""),
+    [feedbackSent, setFeedbackSent] = useState(false);
   const navigate = useNavigate();
   function load() {
     if (user)
@@ -99,6 +108,40 @@ export function PassportPage() {
       load();
     } catch (e) {
       setError((e as Error).message);
+    }
+  }
+  async function sendFeedback() {
+    if (!reaction) {
+      setError("Choose the feeling this coffee left with you.");
+      return;
+    }
+    setBusy("feedback");
+    setError("");
+    try {
+      await api("/feedback", "POST", { reaction, message: feedback, recipeId: data?.favorite?.id });
+      setFeedback("");
+      setFeedbackSent(true);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy("");
+    }
+  }
+  async function evolve(recipe: Recipe) {
+    setBusy(recipe.id + "-evolve");
+    try {
+      const created = await api<Recipe>("/recipes", "POST", {
+        name: recipe.name + " / v" + ((recipe.version || 1) + 1).toString().padStart(2, "0"),
+        config: recipe.config,
+        parentId: recipe.parent_id || recipe.id,
+      });
+      sessionStorage.setItem("velora-evolving", created.id);
+      localStorage.setItem("velora-draft-v1", JSON.stringify(recipe.config));
+      navigate("/lab");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy("");
     }
   }
   return (
@@ -213,6 +256,8 @@ export function PassportPage() {
                       {new Date(r.created_at).toLocaleDateString()}
                     </Eyebrow>
                     <h3>{r.name}</h3>
+                    <p className="recipe-story">{coffeeStory(r.config, r.dna)}</p>
+                    <span className="recipe-personality">{coffeePersonality(r.dna).name}</span>
                     <Dna dna={r.dna} />
                     <div className="button-row">
                       <button
@@ -222,6 +267,9 @@ export function PassportPage() {
                       >
                         {busy === r.id ? "Sending…" : "Craft again"}
                         <ArrowUpRight size={15} />
+                      </button>
+                      <button className="text-link small-link" disabled={!!busy} onClick={() => evolve(r)}>
+                        {busy === r.id + "-evolve" ? "Starting…" : "Create a new version"}
                       </button>
                       <button
                         className="icon-button"
@@ -252,6 +300,7 @@ export function PassportPage() {
               ))}
             </div>
           )}
+          {data.recipes.length > 0 && <CoffeeUniverse recipes={data.recipes} onEvolve={evolve} />}
           <div className="section-heading">
             <h2>
               Collected <em>along the way.</em>
@@ -307,10 +356,87 @@ export function PassportPage() {
               Your first order will start a new chapter here.
             </p>
           )}
+          <section className="feedback-card" aria-labelledby="feedback-title">
+            <div>
+              <Eyebrow>COFFEE MEMORY</Eyebrow>
+              <h2 id="feedback-title">How was your <em>moment?</em></h2>
+              <p>
+                How did it feel? A memory belongs to the coffee, not a rating.
+              </p>
+            </div>
+            {feedbackSent ? (
+              <div className="feedback-thanks" role="status">
+                <Check size={19} /> Thank you — your feedback has been shared.
+              </div>
+            ) : (
+              <form
+                className="feedback-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  sendFeedback();
+                }}
+              >
+                <fieldset>
+                  <legend>Choose the feeling you want to keep</legend>
+                  <div className="reaction-row">
+                    {[
+                      ["Loved it", Heart], ["Made my morning", Sparkles], ["Gave me energy", Zap],
+                      ["Helped me focus", Brain], ["Perfect night coffee", Moon],
+                    ].map(([label, Icon]) => (
+                      <button
+                        type="button"
+                        key={String(label)}
+                        className={reaction === label ? "selected" : ""}
+                        aria-pressed={reaction === label}
+                        onClick={() => setReaction(String(label))}
+                      >
+                        <Icon size={15} /> {String(label)}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
+                <label>
+                  A line for this coffee <span>(optional)</span>
+                  <textarea
+                    value={feedback}
+                    maxLength={1000}
+                    onChange={(event) => setFeedback(event.target.value)}
+                    placeholder="A note you would like to remember…"
+                  />
+                </label>
+                <button className="button" disabled={busy === "feedback"}>
+                  {busy === "feedback" ? "Sending…" : "Send feedback"}
+                  <ArrowUpRight size={16} />
+                </button>
+              </form>
+            )}
+          </section>
         </>
       )}
       {share && <ShareCard {...share} onClose={() => setShare(null)} />}
     </div>
+  );
+}
+function CoffeeUniverse({ recipes, onEvolve }: { recipes: Recipe[]; onEvolve: (recipe: Recipe) => void }) {
+  const [selected, setSelected] = useState(recipes[0]);
+  const center = recipes[0];
+  return (
+    <section className="coffee-universe" aria-labelledby="universe-title">
+      <div>
+        <Eyebrow>YOUR COFFEE CONSTELLATION</Eyebrow>
+        <h2 id="universe-title">A map of what you <em>return to.</em></h2>
+        <p>Nearby coffees share a similar DNA. Select a star to see how your taste is moving.</p>
+        <strong>{selected.name}</strong>
+        <span>{coffeePersonality(selected.dna).name} · {Math.round(recipeDistance(center, selected))}% from your first saved creation</span>
+        <button className="text-link" onClick={() => onEvolve(selected)}>Evolve this coffee <ArrowUpRight size={16} /></button>
+      </div>
+      <div className="constellation-map" role="list" aria-label="Your saved coffees">
+        {recipes.slice(0, 12).map((recipe, index) => {
+          const distance = recipeDistance(center, recipe);
+          return <button key={recipe.id} role="listitem" aria-label={recipe.name} aria-pressed={selected.id === recipe.id} className={selected.id === recipe.id ? "active" : ""} style={{ left: `${16 + (recipe.dna.Creativity * 0.68 + index * 11) % 70}%`, top: `${13 + (recipe.dna.Intensity * 0.61 + index * 17) % 72}%`, width: 13 + recipe.dna.Creaminess / 18, height: 13 + recipe.dna.Creaminess / 18, opacity: 0.62 + Math.min(distance, 100) / 300 }} onClick={() => setSelected(recipe)}><span /></button>;
+        })}
+      </div>
+    </section>
   );
 }
 export function Craft() {

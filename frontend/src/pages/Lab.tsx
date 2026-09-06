@@ -27,6 +27,7 @@ import {
 } from "../types";
 import { CoffeeVisual, Dna, Eyebrow, ErrorNote, Modal } from "../ui";
 import { moods } from "./Home";
+import { coffeePersonality, coffeeStory } from "../experience";
 const steps = ["The foundation", "Make it yours", "The final touch"];
 export function Lab() {
   const { ingredients, catalogError, user, signIn, notify, reloadCatalog } =
@@ -59,6 +60,7 @@ export function Lab() {
     [table, setTable] = useState<{ label: string; token: string } | null>(null);
   const key = useRef(crypto.randomUUID());
   const current = preview(config, ingredients);
+  const identity = coffeePersonality(current.dna);
   const activeMood = params.get("mood");
   function update<K extends keyof Config>(key: K, value: Config[K]) {
     setConfig((c) => ({ ...c, [key]: value }));
@@ -454,15 +456,12 @@ export function Lab() {
               <FlaskConical size={15} />
             </div>
             <Dna dna={current.dna} />
-            <p className="personality">
-              {current.dna.Intensity > 80
-                ? "Bold spirit. Unstoppable energy."
-                : current.dna.Creativity > 75
-                  ? "Curious soul. Unexpectedly wonderful."
-                  : current.dna.Creaminess > 70
-                    ? "Soft edges. A quietly confident soul."
-                    : "Pure focus. Beautifully uncomplicated."}
-            </p>
+            <section className="coffee-identity" aria-live="polite">
+              <Eyebrow>YOUR COFFEE PERSONALITY</Eyebrow>
+              <h3>{identity.name}</h3>
+              <span>{identity.traits.join(". ")}.</span>
+              <p>{coffeeStory(config, current.dna)}</p>
+            </section>
             <div className="table-label">
               <span>
                 {table

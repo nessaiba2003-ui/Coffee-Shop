@@ -44,6 +44,9 @@ export type Recipe = {
   share_token?: string;
   barista?: string;
   location?: string;
+  parent_id?: string;
+  version?: number;
+  reactions?: string[];
 };
 export type Order = {
   id: string;
