@@ -26,6 +26,8 @@ import { PassportPage, Craft, PublicCard } from "./pages/Journey";
 import { Staff, Admin } from "./pages/Operations";
 import "./styles.css";
 
+const deploymentMarker = "admin-routes-2026-09-06";
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null),
     [ingredients, setIngredients] = useState<Ingredient[]>([]),
@@ -71,7 +73,7 @@ export default function App() {
         reloadCatalog,
       }}
     >
-      <div className="announcement">
+      <div className="announcement" data-deployment={deploymentMarker}>
         <span>GOOD COFFEE IS PERSONAL.</span>
         <span>
           MAKE SOMETHING THAT FEELS LIKE YOU <ArrowUpRight size={12} />
