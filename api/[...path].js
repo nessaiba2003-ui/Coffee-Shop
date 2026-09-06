@@ -39,14 +39,16 @@ function pathOf(req) {
 function bodyOf(req) { return typeof req.body === "object" && req.body ? req.body : {}; }
 function ensureAdmins() {
   const accounts = [
-    [process.env.ADMIN_1_EMAIL, process.env.ADMIN_1_PASSWORD, process.env.ADMIN_1_NAME, "1"],
-    [process.env.ADMIN_2_EMAIL, process.env.ADMIN_2_PASSWORD, process.env.ADMIN_2_NAME, "2"],
-    [process.env.ADMIN_EMAIL, process.env.ADMIN_PASSWORD, process.env.ADMIN_NAME, "1"],
+    [process.env.ADMIN_1_EMAIL, process.env.ADMIN_1_PASSWORD, process.env.ADMIN_1_NAME, "ADMIN", "1"],
+    [process.env.ADMIN_2_EMAIL, process.env.ADMIN_2_PASSWORD, process.env.ADMIN_2_NAME, "ADMIN", "2"],
+    [process.env.ADMIN_EMAIL, process.env.ADMIN_PASSWORD, process.env.ADMIN_NAME, "ADMIN", "1"],
+    [process.env.CLIENT_1_EMAIL, process.env.CLIENT_1_PASSWORD, process.env.CLIENT_1_NAME, "CUSTOMER", "1"],
   ];
-  for (const [rawEmail, password, name, slot] of accounts) {
+  for (const [rawEmail, password, name, role, slot] of accounts) {
     const email = rawEmail?.trim().toLowerCase();
     if (email && password && !memory.users.has(email)) {
-      memory.users.set(email, { id: crypto.randomUUID(), email, password, name: name || `Atelier admin ${slot}`, role: "ADMIN" });
+      const label = role === "ADMIN" ? `Atelier admin ${slot}` : `Atelier guest ${slot}`;
+      memory.users.set(email, { id: crypto.randomUUID(), email, password, name: name || label, role });
     }
   }
 }

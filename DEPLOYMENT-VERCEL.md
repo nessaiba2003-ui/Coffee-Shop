@@ -25,6 +25,10 @@ Après le redeploy, connectez-vous avec l’une de ces adresses dans **Sign in**
 
 Les noms historiques `ADMIN_EMAIL`, `ADMIN_PASSWORD` et `ADMIN_NAME` sont aussi pris en charge pour le premier administrateur.
 
+## Compte client initialisé
+
+Pour préparer un compte client stable pour une démonstration, définir `CLIENT_1_EMAIL`, `CLIENT_1_PASSWORD` et `CLIENT_1_NAME` dans les variables **Secret** de Production. Le compte reçoit le rôle `CUSTOMER`, donc il accède au Coffee Lab et au Passport, sans accès au Studio administrateur.
+
 Le fichier `vercel.json` contient déjà les commandes de build correctes : il installe les dépendances du frontend, dont TypeScript, puis publie `frontend/dist`. Ne pas définir de commandes différentes dans le tableau de bord.
 
 Pousser les fichiers sur `main`, puis choisir **Redeploy**. L'URL suivante doit répondre après le déploiement :
