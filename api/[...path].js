@@ -53,6 +53,12 @@ function requireAdmin(current, res) {
 }
 function sessionSecret() { return process.env.SESSION_SECRET || ""; }
 function sign(value) { return crypto.createHmac("sha256", sessionSecret()).update(value).digest("base64url"); }
+function startSession(res, profile) {
+  if (!sessionSecret()) return false;
+  const value = Buffer.from(JSON.stringify(profile)).toString("base64url");
+  res.setHeader("Set-Cookie", `velora_session=${value}.${sign(value)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=43200`);
+  return true;
+}
 function user(req) {
   const token = (req.headers.cookie || "").match(/velora_session=([^;]+)/)?.[1];
   if (!token) return null;
@@ -87,8 +93,11 @@ module.exports = async (req, res) => {
     const { email, name, password } = bodyOf(req);
     if (!email || !name || !password || String(password).length < 12) return send(res, 400, { message: "Use a name, an email and a password of at least 12 characters." });
     if (memory.users.has(String(email).toLowerCase())) return send(res, 409, { message: "An account with this email already exists. Admin accounts use the password configured for them in Vercel." });
-    memory.users.set(String(email).toLowerCase(), { id: crypto.randomUUID(), email: String(email).toLowerCase(), name: String(name), password: String(password), role: "CUSTOMER" });
-    return send(res, 201, { id: memory.users.get(String(email).toLowerCase()).id });
+    const account = { id: crypto.randomUUID(), email: String(email).toLowerCase(), name: String(name), password: String(password), role: "CUSTOMER" };
+    memory.users.set(account.email, account);
+    const profile = { id: account.id, email: account.email, name: account.name, role: account.role };
+    if (!startSession(res, profile)) return send(res, 500, { message: "SESSION_SECRET must be configured in Vercel before Passport accounts can be used." });
+    return send(res, 201, profile);
   }
   if (req.method === "POST" && route === "auth/login") {
     const params = typeof req.body === "string" ? new URLSearchParams(req.body) : bodyOf(req);
@@ -97,9 +106,7 @@ module.exports = async (req, res) => {
     const account = memory.users.get(String(email || "").toLowerCase());
     if (!account || account.password !== password) return send(res, 401, { message: "Incorrect email or password." });
     const profile = { id: account.id, email: account.email, name: account.name, role: account.role };
-    if (!sessionSecret()) return send(res, 500, { message: "SESSION_SECRET must be configured in Vercel before sign-in can be used." });
-    const value = Buffer.from(JSON.stringify(profile)).toString("base64url");
-    res.setHeader("Set-Cookie", `velora_session=${value}.${sign(value)}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=43200`);
+    if (!startSession(res, profile)) return send(res, 500, { message: "SESSION_SECRET must be configured in Vercel before sign-in can be used." });
     return send(res, 200, profile);
   }
   if (req.method === "POST" && route === "auth/logout") { res.setHeader("Set-Cookie", "velora_session=; Path=/; HttpOnly; Secure; Max-Age=0"); return res.status(204).end(); }

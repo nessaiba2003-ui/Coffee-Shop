@@ -197,14 +197,17 @@ function Auth({
           try {
             const email = String(form.get("email")),
               password = String(form.get("password"));
-            if (register)
-              await api("/auth/register", "POST", {
+            if (register) {
+              const created = await api<User>("/auth/register", "POST", {
                 name: form.get("name"),
                 email,
                 password,
               });
-            await login(email, password);
-            onUser(await api<User>("/auth/me"));
+              onUser(created);
+            } else {
+              await login(email, password);
+              onUser(await api<User>("/auth/me"));
+            }
             onClose();
           } catch (e) {
             setError((e as Error).message);
