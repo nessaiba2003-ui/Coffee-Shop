@@ -5,6 +5,10 @@
   "buildCommand": "npm run build",
   "outputDirectory": "frontend/dist",
   "rewrites": [
+    {
+      "source": "/api/admin/:path*",
+      "destination": "/api/admin?path=admin/:path*"
+    },
     { "source": "/lab", "destination": "/index.html" },
     { "source": "/passport", "destination": "/index.html" },
     { "source": "/staff", "destination": "/index.html" },
@@ -19,6 +23,6 @@
     }
   ],
   "functions": {
-    "api/[...path].js": { "maxDuration": 10 }
+    "api/**/*.js": { "maxDuration": 10 }
   }
 }
